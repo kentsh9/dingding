@@ -2,20 +2,18 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const DingCrypto = require('./dingCrypto');
-require('dotenv').config();
 
 const app = express();
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
 
-// 🔁 修改为你自己的 Make Webhook URL
-const WEBHOOK_URL = 'https://hook.us2.make.com/6axj86881p8nk68q4bveh1tisvkto4hu';
+// 👇 替换为你自己的钉钉配置
+const token = '你的新 token';
+const aesKey = '你的新 aes_key';
+const suiteKey = '';
 
-// 🔐 这里填写你在钉钉应用配置页面中看到的 token 和 aes_key
-const token = '你在钉钉看到的新token';
-const aesKey = '你在钉钉看到的新aes_key';
-const suiteKey = ''; // 保持为空即可
+const WEBHOOK_URL = 'https://hook.us2.make.com/6axj86881p8nk68q4bveh1tisvkto4hu';
 
 const dingCrypto = new DingCrypto(token, aesKey, suiteKey);
 
@@ -29,12 +27,10 @@ app.post('/ding-webhook', async (req, res) => {
 
     const decrypted = JSON.parse(plaintext);
 
-    // ✅ 处理钉钉 check_url 验证
     if (decrypted && decrypted.EventType === 'check_url') {
-      return res.send({ msg: 'success' });
+      return res.send({ msg: 'success' }); // 钉钉 check_url 验证
     }
 
-    // 🔁 正常事件，转发到 Make Webhook
     await axios.post(WEBHOOK_URL, {
       text: JSON.stringify(decrypted)
     });
