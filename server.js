@@ -1,33 +1,41 @@
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const DingCrypto = require('./dingCrypto');
-require('dotenv').config();
 
 const app = express();
 app.use(bodyParser.json());
 
 const token = process.env.DING_TOKEN;
 const aesKey = process.env.DING_AES_KEY;
-const suiteKey = process.env.DING_SUITE_KEY || '';
+const suiteKey = process.env.SUITE_KEY || '';
+const forwardUrl = process.env.FORWARD_URL;
+
 const dingCrypto = new DingCrypto(token, aesKey, suiteKey);
-const FORWARD_URL = process.env.FORWARD_URL;
 
 app.post('/ding-webhook', async (req, res) => {
   try {
-    const { encrypt } = req.body;
-    console.log('[钉钉事件] 收到请求：', { encrypt });
+    console.log('[钉钉事件] 收到请求：', req.body);
 
+    const encrypt = req.body.encrypt;
     const decrypted = dingCrypto.decrypt(encrypt);
+
     console.log('[钉钉事件] 解密后明文：', decrypted);
 
-    const result = await axios.post(FORWARD_URL, {
-      text: decrypted
+    // 钉钉验证地址时返回 success
+    if (decrypted.EventType === 'check_url') {
+      return res.send('success');
+    }
+
+    // 转发到 Make webhook
+    await axios.post(forwardUrl, {
+      text: JSON.stringify(decrypted),
     });
 
     res.send('success');
-  } catch (err) {
-    console.error('[解密或转发失败]', err);
+  } catch (error) {
+    console.error('[解密或转发失败]', error);
     res.status(500).send('error');
   }
 });
