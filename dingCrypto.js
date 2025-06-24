@@ -1,19 +1,24 @@
 const crypto = require('crypto');
 
 class DingCrypto {
-  constructor(token, aesKey, suiteKey) {
+  constructor(token, aesKey, suiteKey = '') {
     this.token = token;
-    this.aesKey = Buffer.from(aesKey + '=', 'base64');
-    this.iv = this.aesKey.slice(0, 16);
     this.suiteKey = suiteKey;
+    this.encodingAESKey = aesKey;
+    const AESKey_buffer = Buffer.from(aesKey + '=', 'base64');
+    this.key = AESKey_buffer;
+    this.iv = AESKey_buffer.slice(0, 16);
   }
 
-  decrypt(encrypt) {
-    const decipher = crypto.createDecipheriv('aes-256-cbc', this.aesKey, this.iv);
-    decipher.setAutoPadding(true);
-    let decrypted = decipher.update(encrypt, 'base64', 'utf8');
-    decrypted += decipher.final('utf8');
-    return decrypted;
+  decrypt(text) {
+    const encrypted = Buffer.from(text, 'base64');
+    const decipher = crypto.createDecipheriv('aes-256-cbc', this.key, this.iv);
+    decipher.setAutoPadding(false);
+    let decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+
+    const pad = decrypted[decrypted.length - 1];
+    decrypted = decrypted.slice(20, decrypted.length - pad);
+    return JSON.parse(decrypted.toString());
   }
 }
 
